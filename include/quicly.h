@@ -54,6 +54,9 @@ extern "C" {
 #define QUICLY_STATELESS_RESET_TOKEN_LEN 16
 #define QUICLY_STATELESS_RESET_PACKET_MIN_LEN 39
 
+#define QUICLY_MAX_PN_SIZE 4  /* maximum defined by the RFC used for calculating header protection sampling offset */
+#define QUICLY_SEND_PN_SIZE 2 /* size of PN used for sending */
+
 typedef struct st_quicly_datagram_t {
     ptls_iovec_t data;
     socklen_t salen;

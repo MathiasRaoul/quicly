@@ -47,9 +47,6 @@
 #define QUICLY_PACKET_TYPE_RETRY (QUICLY_LONG_HEADER_BIT | QUICLY_QUIC_BIT | 0x30)
 #define QUICLY_PACKET_TYPE_BITMASK 0xf0
 
-#define QUICLY_MAX_PN_SIZE 4  /* maximum defined by the RFC used for calculating header protection sampling offset */
-#define QUICLY_SEND_PN_SIZE 2 /* size of PN used for sending */
-
 #define QUICLY_TLS_EXTENSION_TYPE_TRANSPORT_PARAMETERS 0xffa5
 #define QUICLY_TRANSPORT_PARAMETER_ID_ORIGINAL_CONNECTION_ID 0
 #define QUICLY_TRANSPORT_PARAMETER_ID_IDLE_TIMEOUT 1
@@ -1753,10 +1750,10 @@ static ptls_iovec_t decrypt_packet(ptls_cipher_context_t *header_protection, ptl
     /* decipher the header protection, as well as obtaining pnbits, pnlen */
     if (encrypted_len < header_protection->algo->iv_size + QUICLY_MAX_PN_SIZE)
         goto Error;
-    ptls_cipher_init(header_protection, packet->octets.base + packet->encrypted_off + QUICLY_MAX_PN_SIZE);
-    ptls_cipher_encrypt(header_protection, hpmask, hpmask, sizeof(hpmask));
-    packet->octets.base[0] ^= hpmask[0] & (QUICLY_PACKET_IS_LONG_HEADER(packet->octets.base[0]) ? 0xf : 0x1f);
-    pnlen = (packet->octets.base[0] & 0x3) + 1;
+    //ptls_cipher_init(header_protection, packet->octets.base + packet->encrypted_off + QUICLY_MAX_PN_SIZE);
+    ptls_cipher_init_and_decrypt(header_protection, packet->octets.base + packet->encrypted_off + QUICLY_MAX_PN_SIZE, hpmask, hpmask, sizeof(hpmask), NULL, NULL);
+     packet->octets.base[0] ^= hpmask[0] & (QUICLY_PACKET_IS_LONG_HEADER(packet->octets.base[0]) ? 0xf : 0x1f);
+     pnlen = (packet->octets.base[0] & 0x3) + 1;
     for (i = 0; i != pnlen; ++i) {
         packet->octets.base[packet->encrypted_off + i] ^= hpmask[i + 1];
         pnbits = (pnbits << 8) | packet->octets.base[packet->encrypted_off + i];
@@ -2118,13 +2115,17 @@ static int commit_send_packet(quicly_conn_t *conn, quicly_send_context_t *s, int
                                                      s->target.first_byte_at, s->dst_payload_from - s->target.first_byte_at);
 
     { /* apply header protection */
-        uint8_t hpmask[1 + QUICLY_SEND_PN_SIZE] = {0};
-        ptls_cipher_init(s->target.cipher->header_protection, s->dst_payload_from - QUICLY_SEND_PN_SIZE + QUICLY_MAX_PN_SIZE);
-        ptls_cipher_encrypt(s->target.cipher->header_protection, hpmask, hpmask, sizeof(hpmask));
-        *s->target.first_byte_at ^= hpmask[0] & (QUICLY_PACKET_IS_LONG_HEADER(*s->target.first_byte_at) ? 0xf : 0x1f);
-        size_t i;
-        for (i = 0; i != QUICLY_SEND_PN_SIZE; ++i)
-            s->dst_payload_from[i - QUICLY_SEND_PN_SIZE] ^= hpmask[i + 1];
+        size_t mask_size = 1 + QUICLY_SEND_PN_SIZE;
+        uint8_t *hpmask = (uint8_t*)malloc(mask_size);
+        memset(hpmask, 0, mask_size);
+
+        ptls_cipher_init_and_encrypt(s->target.cipher->header_protection, s->dst_payload_from - QUICLY_SEND_PN_SIZE + QUICLY_MAX_PN_SIZE, hpmask, hpmask, mask_size, s->target.first_byte_at, s->dst_payload_from);
+        // *s->target.first_byte_at ^= hpmask[0] & (QUICLY_PACKET_IS_LONG_HEADER(*s->target.first_byte_at) ? 0xf : 0x1f);
+
+        // size_t i;
+        // for (i = 0; i != QUICLY_SEND_PN_SIZE; ++i)
+        //     s->dst_payload_from[i - QUICLY_SEND_PN_SIZE] ^= hpmask[i + 1];
+
     }
 
     /* update CC, commit sentmap */
