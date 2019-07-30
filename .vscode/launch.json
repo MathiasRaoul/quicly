@@ -1,0 +1,28 @@
+
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Quicly gdb server",
+        "type": "cppdbg",
+        "request": "launch",
+        // "program": "${workspaceRoot}/myprogram",
+        "program": "/Users/mraoul/dev/quicly/cli",
+        "miDebuggerServerAddress": "172.16.11.136:2000",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceRoot}/",
+        "environment": [],
+        "externalConsole": true,
+        "linux": {
+          "MIMode": "gdb"
+        },
+        "osx": {
+          "MIMode": "gdb"
+        },
+        "windows": {
+          "MIMode": "gdb"
+        }
+      }
+    ]
+}

@@ -45,6 +45,12 @@ extern "C" {
 #endif
 
 /* invariants! */
+#define QUICLY_EPOCH_INITIAL 0
+#define QUICLY_EPOCH_0RTT 1
+#define QUICLY_EPOCH_HANDSHAKE 2
+#define QUICLY_EPOCH_1RTT 3
+
+
 #define QUICLY_LONG_HEADER_BIT 0x80
 #define QUICLY_PACKET_IS_LONG_HEADER(first_byte) (((first_byte)&QUICLY_LONG_HEADER_BIT) != 0)
 
@@ -843,10 +849,13 @@ struct quicly_receive_ctx {
     size_t epoch;
     ptls_iovec_t payload;
     uint64_t pn;
+
+    size_t aead_off;
+    size_t ptlen;
 };
 
-int quicly_receive_begin(quicly_conn_t *conn, quicly_decoded_packet_t *packet, struct quicly_receive_ctx *ctx);
-int quicly_receive_end(struct quicly_receive_ctx *ctx, int ret);
+int quicly_receive_begin(struct quicly_receive_ctx *ctx);
+int quicly_receive_end(struct quicly_receive_ctx *ctx);
 /**
  *
  */
