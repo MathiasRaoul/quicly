@@ -41,7 +41,7 @@ extern "C" {
 #include "quicly/maxsender.h"
 
 #ifndef QUICLY_DEBUG
-#define QUICLY_DEBUG 0
+#define QUICLY_DEBUG 5
 #endif
 
 /* invariants! */
@@ -830,6 +830,23 @@ quicly_datagram_t *quicly_send_stateless_reset(quicly_context_t *ctx, struct soc
  *
  */
 int quicly_receive(quicly_conn_t *conn, quicly_decoded_packet_t *packet);
+
+/**
+ *
+ */
+struct quicly_receive_ctx {
+    quicly_conn_t *conn;
+    quicly_decoded_packet_t *packet;
+    ptls_cipher_context_t *header_protection;
+    ptls_aead_context_t **aead;
+    struct st_quicly_pn_space_t **space;
+    size_t epoch;
+    ptls_iovec_t payload;
+    uint64_t pn;
+};
+
+int quicly_receive_begin(quicly_conn_t *conn, quicly_decoded_packet_t *packet, struct quicly_receive_ctx *ctx);
+int quicly_receive_end(struct quicly_receive_ctx *ctx, int ret);
 /**
  *
  */
